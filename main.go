@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"sort"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -46,12 +45,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if m.GuildID == "" {
-		s.ChannelMessageSend(m.ChannelID, "leave me alone ! >.<")
 		return
 	}
 
-	fmt.Printf("Received message in Guild ID: %s\n", m.GuildID)
-	if m.Content == "-download" {
+	if m.Content == "-download" || m.Content == "-transfer" {
 		perms, err := s.UserChannelPermissions(m.Author.ID, m.ChannelID)
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "Error verifying permissions.")
@@ -63,8 +60,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			s.ChannelMessageSend(m.ChannelID, "You must be a server Administrator to use this command.")
 			return
 		}
-
-		s.ChannelMessageSend(m.ChannelID, "Downloading server data...")
 
 		// fetch from cache
 		guild, err := s.State.Guild(m.GuildID)
@@ -78,96 +73,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 		}
 
-		parseServer(s, guild)
-	}
-}
-
-func parseServer(s *discordgo.Session, g *discordgo.Guild) {
-	var channels []*discordgo.Channel
-	var err error
-
-	// fetch from cache
-	if len(g.Channels) > 0 {
-		channels = make([]*discordgo.Channel, len(g.Channels))
-		copy(channels, g.Channels)
-	} else {
-		// fallback to fetch from discord API
-		channels, err = s.GuildChannels(g.ID)
-		if err != nil {
-			fmt.Println("Error fetching channels:", err)
-			return
+		if m.Content == "-transfer" {
+			s.ChannelMessageSend(m.ChannelID, "Transferring server data...")
+		} else {
+			s.ChannelMessageSend(m.ChannelID, "Downloading server data...")
+			downloadServer(s, guild)
 		}
 	}
-
-	// first group channels by their category
-	categoryToChannels := make(map[string][]*discordgo.Channel)
-	channelToThreads := make(map[string][]*discordgo.Channel)
-	var categoryObjects []*discordgo.Channel
-	var uncategorizedChannels []*discordgo.Channel
-
-	for _, channel := range channels {
-		switch channel.Type {
-		case discordgo.ChannelTypeGuildCategory:
-			categoryObjects = append(categoryObjects, channel)
-		case discordgo.ChannelTypeGuildPublicThread, discordgo.ChannelTypeGuildPrivateThread:
-			channelToThreads[channel.ParentID] = append(channelToThreads[channel.ParentID], channel)
-		default:
-			if channel.ParentID != "" {
-				categoryToChannels[channel.ParentID] = append(categoryToChannels[channel.ParentID], channel)
-			} else {
-				uncategorizedChannels = append(uncategorizedChannels, channel)
-			}
-		}
-	}
-
-	// then sort the categories
-	sort.Slice(categoryObjects, func(i, j int) bool {
-		return categoryObjects[i].Position < categoryObjects[j].Position
-	})
-
-	sort.Slice(uncategorizedChannels, func(i, j int) bool {
-		groupI := getSortGroup(uncategorizedChannels[i].Type)
-		groupJ := getSortGroup(uncategorizedChannels[j].Type)
-
-		if groupI != groupJ {
-			return groupI < groupJ
-		}
-		return uncategorizedChannels[i].Position < uncategorizedChannels[j].Position
-	})
-
-	// then sort the channels inside them
-	for _, childChannels := range categoryToChannels {
-		sort.Slice(childChannels, func(i, j int) bool {
-			groupI := getSortGroup(childChannels[i].Type)
-			groupJ := getSortGroup(childChannels[j].Type)
-
-			if groupI != groupJ {
-				return groupI < groupJ
-			}
-			return childChannels[i].Position < childChannels[j].Position
-		})
-	}
-
-	// parse channels in order
-	for _, channel := range uncategorizedChannels {
-		parseChannel(channel)
-	}
-
-	for _, category := range categoryObjects {
-		fmt.Printf("Category: %s\n", category.Name)
-		for _, channel := range categoryToChannels[category.ID] {
-			parseChannel(channel)
-		}
-	}
-}
-
-func parseChannel(channel *discordgo.Channel) {
-	fmt.Printf("Channel name: %s | Channel Type: %v | Channel Position: %d\n", channel.Name, channel.Type, channel.Position)
-}
-
-func getSortGroup(cType discordgo.ChannelType) int {
-	if cType == discordgo.ChannelTypeGuildVoice || cType == discordgo.ChannelTypeGuildStageVoice {
-		return 1
-	}
-	return 0
 }
