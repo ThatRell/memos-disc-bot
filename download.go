@@ -138,13 +138,13 @@ func downloadChannelMessages(s *discordgo.Session, channel *discordgo.Channel, c
 		return
 	}
 
-	mediaDir := filepath.Join(channelDir, "media")
-	err = os.MkdirAll(mediaDir, 0777)
+	attachDir := filepath.Join(channelDir, "attachments")
+	err = os.MkdirAll(attachDir, 0777)
 	if err != nil {
-		fmt.Println("Error making media directory:", err)
+		fmt.Println("Error making attechments directory:", err)
 		return
 	}
-	downloadAttachments(attachments, mediaDir)
+	downloadAttachments(attachments, attachDir)
 }
 
 func writeMessagesToFile(messageList []*discordgo.Message, filepath string) ([]*discordgo.MessageAttachment, error) {
