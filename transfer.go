@@ -150,7 +150,7 @@ func sendMessagesToMemos(s *discordgo.Session, channel *discordgo.Channel, tag s
 			memoAttachments = append(memoAttachments, *res)
 		}
 
-		content := fmt.Sprintf("%s #%s", m.Content, tag)
+		content := fmt.Sprintf("%s\n\n\n#%s", m.Content, tag)
 
 		err := createMemo(content, memoAttachments, space)
 		if err != nil {
