@@ -75,6 +75,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		if m.Content == "-transfer" {
 			s.ChannelMessageSend(m.ChannelID, "Transferring server data...")
+			transferServer(s, guild)
 		} else {
 			s.ChannelMessageSend(m.ChannelID, "Downloading server data...")
 			downloadServer(s, guild)

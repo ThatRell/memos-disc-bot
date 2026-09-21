@@ -70,7 +70,7 @@ func downloadServer(s *discordgo.Session, g *discordgo.Guild) {
 }
 
 func downloadChannel(s *discordgo.Session, channel *discordgo.Channel, threadMap map[string][]*discordgo.Channel, categoryDir string) {
-	fmt.Printf("Channel name: %s | Channel Type: %v | Channel Position: %d\n", channel.Name, channel.Type, channel.Position)
+	fmt.Printf("Channel name: %s\n", channel.Name)
 
 	channelDir := filepath.Join(categoryDir, channel.Name)
 	err := os.MkdirAll(channelDir, 0777)
@@ -128,8 +128,8 @@ func downloadChannelMessages(s *discordgo.Session, channel *discordgo.Channel, c
 		return
 	}
 
-	fileName := filepath.Join(channelDir, fmt.Sprintf("%s.txt", channel.Name))
-	attachments, err := writeMessagesToFile(messageList, fileName)
+	filename := filepath.Join(channelDir, fmt.Sprintf("%s.txt", channel.Name))
+	attachments, err := writeMessagesToFile(messageList, filename)
 	if err != nil {
 		fmt.Printf("Error downloading %s: %v\n", channel.Name, err)
 	}
@@ -197,8 +197,8 @@ func downloadAttachments(attachments []*discordgo.MessageAttachment, folderPath 
 			defer func() { <-sem }()
 			defer wg.Done()
 
-			uniqueFileName := fmt.Sprintf("%s_%s", id, filename)
-			dest := filepath.Join(folderPath, uniqueFileName)
+			uniqueFilename := fmt.Sprintf("%s_%s", id, filename)
+			dest := filepath.Join(folderPath, uniqueFilename)
 			downloadAttachmentFile(url, dest)
 		}(attachment.ID, attachment.URL, attachment.Filename)
 	}
